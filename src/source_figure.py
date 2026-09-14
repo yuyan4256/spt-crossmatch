@@ -337,6 +337,21 @@ def csc2_marker(row):
     return m
 
 
+def plot_csc2_source(source, out_path=None, **kwargs):
+    """The standard panels for ONE CSC2 candidate.
+
+    Markers = SPT centroid + σ_pos circle, plus the Chandra position and its
+    95% circle when the row has one. Everything else (`fov_arcsec`, `small`,
+    `big`, ...) goes straight to `plot_source`, and so does the return value:
+    (figure or out_path, {panel: error}).
+    """
+    markers = spt_markers(source)
+    csc2 = csc2_marker(source)
+    if csc2:
+        markers.append(csc2)
+    return plot_source(source, out_path=out_path, markers=markers, **kwargs)
+
+
 # ─────────────────────────── the figure ───────────────────────────
 def plot_source(source, out_path=None, small=DEFAULT_SMALL, big=DEFAULT_BIG,
                 markers=None, fov_arcsec=45.0, cutout_dir=None, dpi=150,
