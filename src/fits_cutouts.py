@@ -14,8 +14,9 @@ DECaPS r      : legacysurvey.org fits-cutout, layer=decaps2 — calibrated
                 nanomaggies (AB); converted to μJy. Quantitative, unlike the
                 DECaPS HiPS preview.
 NVSS          : SkyView 'NVSS' — Jy/beam; converted to mJy/beam.
-(RACS-mid stays on HiPS: CASDA has no anonymous FITS cutout service; the
- RACS HiPS was verified quantitative against the catalog.)
+RACS-mid      : CASDA SODA cutout of the restored Stokes-I tile, 2″/px —
+                Jy/beam; converted to mJy/beam. Needs an OPAL login
+                (see fetch_racs_fits).
 
 unWISE W1/W2 are handled by src/unwise.py (already FITS + cache).
 
