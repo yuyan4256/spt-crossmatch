@@ -347,23 +347,26 @@ def crossmatch_row(name):
     return rows.iloc[0]
 
 
-def plot_csc2_source(name, fov=45.0, out_path=None):
-    """The standard panels for ONE CSC2 candidate, by source id.
+def plot_source_by_name(name, fov=45.0, out_path=None):
+    """The standard panels for ONE source of the 73, by source id.
 
     name : SPT source id, e.g. 'SPT3G_J174423.2-311650.6'
     fov  : displayed field of view in arcsec. The cached FITS were fetched at
            45″, so a larger fov stops cropping but cannot show more sky.
     out_path : save the PNG here; None returns the figure (notebook use).
 
-    Markers = SPT centroid + σ_pos circle, plus the Chandra position and its
-    95% circle when the row has one. Returns (figure or out_path,
+    Works for every source, CSC2-matched or not. Markers = SPT centroid +
+    σ_pos circle; sources with `has_csc2_match_within_3sigma` also get the
+    Chandra position and its 95% circle. A CSC2 source that was recorded but
+    fell outside 3σ_pos is NOT marked. Returns (figure or out_path,
     {panel: error}), as `plot_source` does.
     """
     source = crossmatch_row(name)
     markers = spt_markers(source)
-    csc2 = csc2_marker(source)
-    if csc2:
-        markers.append(csc2)
+    if bool(source.get('has_csc2_match_within_3sigma', False)):
+        csc2 = csc2_marker(source)
+        if csc2:
+            markers.append(csc2)
     return plot_source(source, out_path=out_path, markers=markers, fov_arcsec=fov)
 
 

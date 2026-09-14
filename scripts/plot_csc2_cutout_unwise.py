@@ -2,7 +2,7 @@
 """CSC2-candidate cutout figures: the standard per-source panels plus the
 Chandra position and its 95% error circle.
 
-This is `src.source_figure.plot_csc2_source` (= `plot_source` with two extra markers) — the figure
+This is `src.source_figure.plot_source_by_name` looped over the CSC2 matches — the figure
 layout, the panel fetching, the SPT contour convention and the error handling
 all live in that one module. Until 2026-09 this script carried its own copies
 of `_load_spt`, `_reproject_spt`, `_off_source_rms` and `_draw_spt_contours`,
@@ -16,7 +16,7 @@ one pixel-for-pixel — it replaces it with the version whose colorbars mean
 something.
 
 Usage:
-  python scripts/plot_csc2_cutout_unwise.py                     # all CSC2 matches
+  python scripts/plot_csc2_cutout_unwise.py                     # all CSC2 matches within 3σ
   python scripts/plot_csc2_cutout_unwise.py SPT3G_J172051.9-354642.8
   python scripts/plot_csc2_cutout_unwise.py --out-dir /tmp/check
 """
@@ -31,7 +31,7 @@ import pandas as pd
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, 'src'))
 
-from source_figure import csc2_marker, plot_csc2_source
+from source_figure import csc2_marker, plot_source_by_name
 
 TABLE = os.path.join(REPO, 'outputs', 'v4_crossmatch_table.csv')
 OUT_DIR = os.path.join(REPO, 'outputs', 'images', 'v4_csc2_candidates')
@@ -52,7 +52,7 @@ def main():
         if missing:
             print(f'!! not in the table: {sorted(missing)}')
     else:
-        rows = df[df['CSC2_cat_ra'].notna()]
+        rows = df[df['has_csc2_match_within_3sigma'].astype(bool)]
     if rows.empty:
         raise SystemExit('nothing to plot')
 
@@ -60,11 +60,11 @@ def main():
     print(f'{len(rows)} source(s) -> {args.out_dir}')
     for n, (_, row) in enumerate(rows.iterrows(), 1):
         sid = row['id']
-        if csc2_marker(row) is None:
-            print(f'[{n}/{len(rows)}] {sid}  (no CSC2 position — SPT marker only)')
+        if not (bool(row['has_csc2_match_within_3sigma']) and csc2_marker(row)):
+            print(f'[{n}/{len(rows)}] {sid}  (no CSC2 match within 3σ — SPT marker only)')
         out = os.path.join(args.out_dir, f'{sid}.png')
         print(f'[{n}/{len(rows)}] {sid}', flush=True)
-        _, failures = plot_csc2_source(sid, fov=args.fov, out_path=out)
+        _, failures = plot_source_by_name(sid, fov=args.fov, out_path=out)
         for key, err in failures.items():
             print(f'    [{key}] {err[:90]}')
 
