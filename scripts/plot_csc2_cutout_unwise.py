@@ -64,7 +64,7 @@ def main():
             print(f'[{n}/{len(rows)}] {sid}  (no CSC2 position — SPT marker only)')
         out = os.path.join(args.out_dir, f'{sid}.png')
         print(f'[{n}/{len(rows)}] {sid}', flush=True)
-        _, failures = plot_csc2_source(row, out_path=out, fov_arcsec=args.fov)
+        _, failures = plot_csc2_source(sid, fov=args.fov, out_path=out)
         for key, err in failures.items():
             print(f'    [{key}] {err[:90]}')
 

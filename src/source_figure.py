@@ -31,7 +31,7 @@ from astropy.visualization.wcsaxes import SphericalCircle
 from scipy.ndimage import gaussian_filter
 
 from cutouts import load_spt_cutout, reproject_to
-from paths import V4_CUTOUT_DIR
+from paths import OUT, V4_CUTOUT_DIR
 from units import unwise_dn_to_mjy
 
 # ─────────────────────────── panel registry ───────────────────────────
@@ -337,19 +337,34 @@ def csc2_marker(row):
     return m
 
 
-def plot_csc2_source(source, out_path=None, **kwargs):
-    """The standard panels for ONE CSC2 candidate.
+def crossmatch_row(name):
+    """One row of outputs/v4_crossmatch_table.csv, looked up by source id."""
+    import pandas as pd
+    table = pd.read_csv(os.path.join(OUT, 'v4_crossmatch_table.csv'))
+    rows = table[table['id'] == name]
+    if rows.empty:
+        raise KeyError(f'{name!r} is not in v4_crossmatch_table.csv')
+    return rows.iloc[0]
+
+
+def plot_csc2_source(name, fov=45.0, out_path=None):
+    """The standard panels for ONE CSC2 candidate, by source id.
+
+    name : SPT source id, e.g. 'SPT3G_J174423.2-311650.6'
+    fov  : displayed field of view in arcsec. The cached FITS were fetched at
+           45″, so a larger fov stops cropping but cannot show more sky.
+    out_path : save the PNG here; None returns the figure (notebook use).
 
     Markers = SPT centroid + σ_pos circle, plus the Chandra position and its
-    95% circle when the row has one. Everything else (`fov_arcsec`, `small`,
-    `big`, ...) goes straight to `plot_source`, and so does the return value:
-    (figure or out_path, {panel: error}).
+    95% circle when the row has one. Returns (figure or out_path,
+    {panel: error}), as `plot_source` does.
     """
+    source = crossmatch_row(name)
     markers = spt_markers(source)
     csc2 = csc2_marker(source)
     if csc2:
         markers.append(csc2)
-    return plot_source(source, out_path=out_path, markers=markers, **kwargs)
+    return plot_source(source, out_path=out_path, markers=markers, fov_arcsec=fov)
 
 
 # ─────────────────────────── the figure ───────────────────────────
