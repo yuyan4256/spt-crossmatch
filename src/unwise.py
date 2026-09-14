@@ -1,4 +1,11 @@
-"""Helper to fetch unWISE W1 cutouts and mosaic tiles."""
+"""unWISE W1/W2 cutouts (neo6, Vega nanomaggies, 2.75″/px) with a disk cache.
+
+Each (band, size) request is extracted into its own folder and only that
+band's `-w{band}-img-m` tiles are mosaicked. Until 2026-09-14 W1 and W2 tiles
+were extracted into one folder and globbed together, so every cached "W2"
+mosaic was the W1+W2 average; caches from that scheme (unwise_w{1,2}.fits
+without a size tag) must not be used.
+"""
 import os, tarfile, glob
 import urllib.request
 import numpy as np
@@ -8,6 +15,8 @@ from reproject import reproject_interp
 from reproject.mosaicking import find_optimal_celestial_wcs, reproject_and_coadd
 
 UNWISE_CACHE = os.path.join(os.path.dirname(__file__), '..', 'data', 'unwise')
+UNWISE_PIXSCALE = 2.75    # arcsec/px
+UNWISE_MAX_PX = 1024      # cutout_fits caps size here (checked 2026-09-14)
 
 
 def fetch_unwise(ra, dec, source_id=None, size_px=100, band=1, version='neo6',
@@ -41,8 +50,11 @@ def fetch_unwise(ra, dec, source_id=None, size_px=100, band=1, version='neo6',
     if source_id is None:
         source_id = f'{ra:.4f}_{dec:.4f}'
 
+    if size_px > UNWISE_MAX_PX:
+        raise ValueError(f'size_px={size_px}: unwise.me caps cutouts at {UNWISE_MAX_PX} px')
     src_dir = os.path.join(cache_dir, source_id)
-    mosaic_path = os.path.join(src_dir, f'unwise_w{band}.fits')
+    mosaic_path = os.path.join(src_dir, f'unwise_w{band}_{size_px}px.fits')
+    tile_dir = os.path.join(src_dir, f'tiles_w{band}_{size_px}px')
 
     # Return cached mosaic if exists
     if os.path.isfile(mosaic_path):
@@ -50,31 +62,24 @@ def fetch_unwise(ra, dec, source_id=None, size_px=100, band=1, version='neo6',
             return hdul[0].data.copy(), WCS(hdul[0].header)
 
     # Download
-    os.makedirs(src_dir, exist_ok=True)
+    os.makedirs(tile_dir, exist_ok=True)
     url = (f'https://unwise.me/cutout_fits?version={version}'
            f'&ra={ra}&dec={dec}&size={size_px}&bands={band}')
-    tar_path = os.path.join(src_dir, 'cutout.tar.gz')
+    tar_path = os.path.join(tile_dir, 'cutout.tar.gz')
 
     print(f'  Downloading unWISE: {url[:80]}...')
     urllib.request.urlretrieve(url, tar_path)
 
     # Extract FITS files
     with tarfile.open(tar_path, 'r:gz') as tf:
-        tf.extractall(src_dir)
+        tf.extractall(tile_dir)
     os.remove(tar_path)
 
-    # Find all *-img-m.fits files (the image tiles)
-    fits_files = glob.glob(os.path.join(src_dir, '**', '*-img-m.fits'),
+    # This band's image tiles only.
+    fits_files = glob.glob(os.path.join(tile_dir, '**', f'*-w{band}-img-m.fits'),
                            recursive=True)
     if not fits_files:
-        # Fallback: any .fits file
-        fits_files = glob.glob(os.path.join(src_dir, '**', '*.fits'),
-                               recursive=True)
-        # Exclude the mosaic we might write
-        fits_files = [f for f in fits_files if 'unwise_w' not in f]
-
-    if not fits_files:
-        raise FileNotFoundError(f'No FITS tiles found in {src_dir}')
+        raise FileNotFoundError(f'No w{band} image tiles found in {tile_dir}')
 
     # Load HDUs
     hdus = []

@@ -31,6 +31,7 @@ from astropy.visualization.wcsaxes import SphericalCircle
 from scipy.ndimage import gaussian_filter
 
 from cutouts import load_spt_cutout, reproject_to
+from fits_cutouts import DOWNLOAD_FOV_ARCSEC
 from paths import OUT, V4_CUTOUT_DIR
 from units import unwise_dn_to_mjy
 
@@ -43,9 +44,10 @@ MJY_VEGA = r'$F_\nu$ (mJy, Vega)'
 
 def _unwise(band):
     def fetch(ra, dec, source_id=None):
-        from unwise import fetch_unwise
+        from unwise import UNWISE_PIXSCALE, fetch_unwise
+        size_px = int(np.ceil(DOWNLOAD_FOV_ARCSEC / UNWISE_PIXSCALE))
         data_dn, wcs = fetch_unwise(ra, dec, source_id=source_id,
-                                    size_px=48, band=int(band[1]))
+                                    size_px=size_px, band=int(band[1]))
         return unwise_dn_to_mjy(data_dn, band), wcs
     return fetch
 
@@ -226,13 +228,25 @@ def draw_spt_contours(ax, contour_sets, tgt_wcs, tgt_shape, is_neg,
 
 
 # ─────────────────────────── one panel ───────────────────────────
+def _cut_to_fov(data, wcs, coord, fov_arcsec, margin_px=2):
+    """(data, wcs) trimmed to a square of `fov_arcsec` (+ a few pixels) around
+    `coord`; pixels outside the download are NaN."""
+    from astropy.nddata import Cutout2D
+    from astropy.wcs.utils import proj_plane_pixel_scales
+    scale = float(np.mean(proj_plane_pixel_scales(wcs))) * 3600.0
+    n = int(np.ceil(fov_arcsec / scale)) + 2 * margin_px
+    if n >= max(data.shape):
+        return data, wcs
+    cut = Cutout2D(data, coord, (n, n), wcs=wcs, mode='partial', fill_value=np.nan)
+    return cut.data, cut.wcs
+
+
 def _crop(ax, wcs, coord, fov_arcsec):
     """Limit the displayed field to `fov_arcsec`, centred on the source.
 
-    The cached FITS were downloaded at a fixed 45″ and the cache key carries
-    no FOV, so a larger `fov_arcsec` cannot conjure more sky — it only stops
-    cropping. Re-download with a bigger fov_arcsec in fits_cutouts if you
-    genuinely need a wider field.
+    Panels are downloaded once at fits_cutouts.DOWNLOAD_FOV_ARCSEC (786″) at
+    native pixel scale; this is where a figure picks how much of that to show.
+    A fov beyond the download size just shows everything there is.
     """
     from astropy.wcs.utils import proj_plane_pixel_scales
     scale = float(np.mean(proj_plane_pixel_scales(wcs))) * 3600.0
@@ -251,6 +265,10 @@ def _draw_panel(fig, gridspec_cell, spec, source, coord, contour_sets,
     try:
         data, wcs = spec['fetch'](float(source['ra_deg']),
                                   float(source['dec_deg']), source_id=sid)
+        # Cut the full-size download down to the fov first, so the colour
+        # stretch describes the pixels on display and contours are reprojected
+        # onto a small grid.
+        data, wcs = _cut_to_fov(data, wcs, coord, fov_arcsec)
         if not np.any(np.isfinite(data)):
             raise ValueError('all NaN')
         # Linear percentile stretch: the colorbar has to mean what it says.
@@ -351,8 +369,8 @@ def plot_source_by_name(name, fov=45.0, out_path=None):
     """The standard panels for ONE source of the 73, by source id.
 
     name : SPT source id, e.g. 'SPT3G_J174423.2-311650.6'
-    fov  : displayed field of view in arcsec. The cached FITS were fetched at
-           45″, so a larger fov stops cropping but cannot show more sky.
+    fov  : displayed field of view in arcsec, cropped from FITS downloaded at
+           786″ (native pixels). SPT contours only cover ~570″ (38 × 15″ cutouts).
     out_path : save the PNG here; None returns the figure (notebook use).
 
     Works for every source, CSC2-matched or not. Markers = SPT centroid +

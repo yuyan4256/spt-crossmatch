@@ -18,6 +18,15 @@ NVSS          : SkyView 'NVSS' — Jy/beam; converted to mJy/beam.
  RACS HiPS was verified quantitative against the catalog.)
 
 unWISE W1/W2 are handled by src/unwise.py (already FITS + cache).
+
+Download once, crop at plot time
+--------------------------------
+Every fetcher downloads DOWNLOAD_FOV_ARCSEC (786″) at the survey's NATIVE
+pixel scale, whatever the figure will show; `source_figure._crop` then trims
+to the requested fov. 786″ is the largest DECaPS field the legacysurvey
+cutout server returns in one request at 0.262″/px (3000 px cap, checked
+2026-09-14). The cache filename carries the download size, so files from the
+old fixed-45″ scheme are never mistaken for full-size ones.
 """
 import os
 
@@ -27,6 +36,14 @@ from astropy.wcs import WCS
 
 _HERE      = os.path.dirname(os.path.abspath(__file__))
 CACHE_DIR  = os.path.join(_HERE, '..', 'data', 'fits_cache')
+
+DOWNLOAD_FOV_ARCSEC = 786.0
+
+# native pixel scales, arcsec/px
+DECAPS_PIXSCALE = 0.262      # legacysurvey cutout server cap: 3000 px
+ALLWISE_PIXSCALE = 1.375     # AllWISE Atlas via SkyView
+NVSS_PIXSCALE = 15.0         # NVSS via SkyView
+DECAPS_MAX_PX = 3000
 
 # AllWISE Atlas DN -> mJy (Vega), same constants used for the catalog mags.
 ALLWISE_DN_TO_MJY = {'W1': 1.935e-3, 'W2': 2.7048e-3,
@@ -40,9 +57,16 @@ SKYVIEW_NAME = {'W1': 'WISE 3.4', 'W2': 'WISE 4.6',
 NMGY_TO_UJY = 3.631
 
 
-def _cache_path(tag, ra_deg, dec_deg):
+def _cache_path(tag, ra_deg, dec_deg, fov_arcsec):
     os.makedirs(CACHE_DIR, exist_ok=True)
-    return os.path.join(CACHE_DIR, f'{tag}_{ra_deg:.5f}_{dec_deg:.5f}.fits')
+    return os.path.join(CACHE_DIR,
+                        f'{tag}_{fov_arcsec:.0f}as_{ra_deg:.5f}_{dec_deg:.5f}.fits')
+
+
+def _skyview_pixels(fov_arcsec, native_arcsec):
+    """SkyView resamples to `pixels` (default 300) whatever the width, so ask
+    for the native pixel count explicitly."""
+    return int(np.ceil(fov_arcsec / native_arcsec))
 
 
 def _north_up(data, wcs):
@@ -96,9 +120,9 @@ def _validate_or_remove(path):
         raise RuntimeError(f'corrupt download removed: {e}')
 
 
-def fetch_allwise_atlas(ra_deg, dec_deg, band, fov_arcsec=45.0):
-    """AllWISE Atlas cutout via SkyView. Returns (data_mJy_Vega, wcs)."""
-    path = _cache_path(f'allwise_{band}', ra_deg, dec_deg)
+def fetch_allwise_atlas(ra_deg, dec_deg, band, fov_arcsec=DOWNLOAD_FOV_ARCSEC):
+    """AllWISE Atlas cutout via SkyView at 1.375″/px. Returns (data_mJy_Vega, wcs)."""
+    path = _cache_path(f'allwise_{band}', ra_deg, dec_deg, fov_arcsec)
     if not os.path.isfile(path):
         from astroquery.skyview import SkyView
         from astropy.coordinates import SkyCoord
@@ -106,23 +130,27 @@ def fetch_allwise_atlas(ra_deg, dec_deg, band, fov_arcsec=45.0):
         imgs = SkyView.get_images(
             position=SkyCoord(ra=ra_deg*u.deg, dec=dec_deg*u.deg),
             survey=[SKYVIEW_NAME[band]],
-            width=fov_arcsec*u.arcsec, height=fov_arcsec*u.arcsec)
+            width=fov_arcsec*u.arcsec, height=fov_arcsec*u.arcsec,
+            pixels=_skyview_pixels(fov_arcsec, ALLWISE_PIXSCALE))
         imgs[0].writeto(path, overwrite=True)
         print(f'  Downloaded AllWISE {band}: {os.path.basename(path)}')
     data_dn, wcs = _read(path)
     return data_dn * ALLWISE_DN_TO_MJY[band], wcs
 
 
-def fetch_decaps_fits(ra_deg, dec_deg, band='r', fov_arcsec=45.0,
-                      pixscale=0.262):
+def fetch_decaps_fits(ra_deg, dec_deg, band='r', fov_arcsec=DOWNLOAD_FOV_ARCSEC,
+                      pixscale=DECAPS_PIXSCALE):
     """DECaPS DR2 calibrated cutout via the Legacy Survey cutout server.
 
     Returns (data_uJy_AB, wcs). Pixel values are real fluxes (nanomaggies
     converted to μJy) — colorbar-safe, unlike the DECaPS HiPS preview.
     """
-    path = _cache_path(f'decaps_{band}', ra_deg, dec_deg)
+    path = _cache_path(f'decaps_{band}', ra_deg, dec_deg, fov_arcsec)
     if not os.path.isfile(path):
         size = int(round(fov_arcsec / pixscale))
+        if size > DECAPS_MAX_PX:
+            raise ValueError(f'{fov_arcsec}″ at {pixscale}″/px is {size} px; the '
+                             f'cutout server silently caps at {DECAPS_MAX_PX} px')
         url = ('https://www.legacysurvey.org/viewer/fits-cutout'
                f'?ra={ra_deg}&dec={dec_deg}&layer=decaps2&pixscale={pixscale}'
                f'&bands={band}&size={size}')
@@ -171,7 +199,7 @@ def _fetch_decaps_datalab(ra_deg, dec_deg, band, fov_arcsec, path):
     print(f'  Downloaded DECaPS {band} (Data Lab): {os.path.basename(path)}')
 
 
-def fetch_racs_fits(ra_deg, dec_deg, fov_arcsec=45.0, username=None):
+def fetch_racs_fits(ra_deg, dec_deg, fov_arcsec=DOWNLOAD_FOV_ARCSEC, username=None):
     """RACS-mid Stokes-I cutout via CASDA SODA. Returns (data_mJy_per_beam, wcs).
 
     Requires a (free) CSIRO OPAL account. First-time setup — run once in a
@@ -183,7 +211,7 @@ def fetch_racs_fits(ra_deg, dec_deg, fov_arcsec=45.0, username=None):
     After that this function reads the credential from the keyring.
     Set username here or export CASDA_USERNAME.
     """
-    path = _cache_path('racsmid', ra_deg, dec_deg)
+    path = _cache_path('racsmid', ra_deg, dec_deg, fov_arcsec)
     if not os.path.isfile(path):
         from astroquery.casda import Casda
         from astroquery.utils.tap.core import TapPlus
@@ -253,9 +281,9 @@ def fetch_racs_fits(ra_deg, dec_deg, fov_arcsec=45.0, username=None):
     return data_jyb * 1000.0, wcs
 
 
-def fetch_nvss_fits(ra_deg, dec_deg, fov_arcsec=45.0):
-    """NVSS cutout via SkyView. Returns (data_mJy_per_beam, wcs)."""
-    path = _cache_path('nvss', ra_deg, dec_deg)
+def fetch_nvss_fits(ra_deg, dec_deg, fov_arcsec=DOWNLOAD_FOV_ARCSEC):
+    """NVSS cutout via SkyView at 15″/px. Returns (data_mJy_per_beam, wcs)."""
+    path = _cache_path('nvss', ra_deg, dec_deg, fov_arcsec)
     if not os.path.isfile(path):
         from astroquery.skyview import SkyView
         from astropy.coordinates import SkyCoord
@@ -263,7 +291,8 @@ def fetch_nvss_fits(ra_deg, dec_deg, fov_arcsec=45.0):
         imgs = SkyView.get_images(
             position=SkyCoord(ra=ra_deg*u.deg, dec=dec_deg*u.deg),
             survey=['NVSS'],
-            width=fov_arcsec*u.arcsec, height=fov_arcsec*u.arcsec)
+            width=fov_arcsec*u.arcsec, height=fov_arcsec*u.arcsec,
+            pixels=_skyview_pixels(fov_arcsec, NVSS_PIXSCALE))
         imgs[0].writeto(path, overwrite=True)
         print(f'  Downloaded NVSS: {os.path.basename(path)}')
     data_jyb, wcs = _read(path)
