@@ -1,0 +1,49 @@
+# ── Data and results: never committed ──────────────────────────────────
+# Collaborators are expected to hold identical copies of data/ locally.
+# See README.md "Data layout" for the exact filenames the code expects.
+data/
+outputs/
+
+# Common data formats (extra safety, in case something lands outside data/)
+*.fits
+*.fit
+*.fz
+*.csv
+*.tsv
+*.parquet
+*.h5
+*.hdf5
+*.npz
+
+# ── Papers ─────────────────────────────────────────────────────────────
+# PDFs are all public; references/README.md lists arXiv IDs and what each
+# one is used for. Keep the README, skip the 37 MB of binaries.
+references/*.pdf
+
+# ── Slides ─────────────────────────────────────────────────────────────
+# Slides live in Google Slides, never in this repo.
+presentations/
+*.pptx
+*.key
+
+# ── Notebooks ──────────────────────────────────────────────────────────
+# Outputs are stripped before committing (nbstripout) -- see README.
+.ipynb_checkpoints/
+notebooks/*.png
+
+# ── Tooling / scratch ──────────────────────────────────────────────────
+.claude/
+__pycache__/
+*.pyc
+node_modules/
+anaconda_projects/
+.idea/
+.vscode/
+
+# ── Secrets ────────────────────────────────────────────────────────────
+.env
+*.key
+*.pem
+
+# ── macOS ──────────────────────────────────────────────────────────────
+.DS_Store

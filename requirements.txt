@@ -1,0 +1,21 @@
+# Versions this code was last run with (Python 3.11). Lower bounds, not pins.
+numpy>=1.26
+pandas>=2.3
+scipy>=1.10
+matplotlib>=3.7
+astropy>=7.2
+astroquery>=0.4.11
+pyvo>=1.9
+reproject>=0.13
+requests>=2.29
+keyring>=23      # CASDA/OPAL login for RACS-mid cutouts (src/fits_cutouts.py)
+openpyxl>=3.0    # the .xlsx exports
+
+# notebooks
+jupyter
+nbstripout
+
+# Not on PyPI:
+#   spt3g_software — only for scripts/gaia_official_10arcsec.py and for writing
+#   the .g3 mapping in scripts/null_resample/make_galactic_mappings.py
+#   (expected at ~/spt3g_software/build)
