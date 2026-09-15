@@ -121,19 +121,50 @@ def _validate_or_remove(path):
         raise RuntimeError(f'corrupt download removed: {e}')
 
 
+def _skyview_fits(survey, ra_deg, dec_deg, fov_arcsec, native_arcsec, path,
+                  tries=6):
+    """One SkyView image at native pixel scale, written to `path`.
+
+    Asks runquery.pl for the FITS directly (astroquery's two-step
+    get_images 404s whenever SkyView fails server-side). SkyView sometimes
+    answers a valid request with a 1-pixel empty image — seen 2026-09-14 for
+    WISE 12/22 on requests that succeed a minute later — so every answer is
+    checked for the requested shape and non-zero data, and retried.
+    """
+    import time
+    import io
+    import requests
+    npix = _skyview_pixels(fov_arcsec, native_arcsec)
+    params = dict(Position=f'{ra_deg},{dec_deg}', Survey=survey,
+                  Pixels=str(npix), Size=str(fov_arcsec / 3600.0), Return='FITS')
+    last = None
+    for attempt in range(1, tries + 1):
+        try:
+            resp = requests.get('https://skyview.gsfc.nasa.gov/current/cgi/runquery.pl',
+                                params=params, timeout=180)
+            resp.raise_for_status()
+            with fits.open(io.BytesIO(resp.content)) as hdul:
+                data = hdul[0].data
+                if data is None or data.shape != (npix, npix):
+                    raise ValueError(f'got shape {None if data is None else data.shape}, '
+                                     f'wanted {(npix, npix)}')
+                if not np.any(np.isfinite(data)) or np.nanmax(np.abs(data)) == 0:
+                    raise ValueError('empty image')
+            with open(path, 'wb') as fh:
+                fh.write(resp.content)
+            return
+        except Exception as e:
+            last = e
+            time.sleep(15 * attempt)
+    raise RuntimeError(f'SkyView {survey} failed {tries}×: {last}')
+
+
 def fetch_allwise_atlas(ra_deg, dec_deg, band, fov_arcsec=DOWNLOAD_FOV_ARCSEC):
     """AllWISE Atlas cutout via SkyView at 1.375″/px. Returns (data_mJy_Vega, wcs)."""
     path = _cache_path(f'allwise_{band}', ra_deg, dec_deg, fov_arcsec)
     if not os.path.isfile(path):
-        from astroquery.skyview import SkyView
-        from astropy.coordinates import SkyCoord
-        import astropy.units as u
-        imgs = SkyView.get_images(
-            position=SkyCoord(ra=ra_deg*u.deg, dec=dec_deg*u.deg),
-            survey=[SKYVIEW_NAME[band]],
-            width=fov_arcsec*u.arcsec, height=fov_arcsec*u.arcsec,
-            pixels=_skyview_pixels(fov_arcsec, ALLWISE_PIXSCALE))
-        imgs[0].writeto(path, overwrite=True)
+        _skyview_fits(SKYVIEW_NAME[band], ra_deg, dec_deg, fov_arcsec,
+                      ALLWISE_PIXSCALE, path)
         print(f'  Downloaded AllWISE {band}: {os.path.basename(path)}')
     data_dn, wcs = _read(path)
     return data_dn * ALLWISE_DN_TO_MJY[band], wcs
@@ -286,15 +317,7 @@ def fetch_nvss_fits(ra_deg, dec_deg, fov_arcsec=DOWNLOAD_FOV_ARCSEC):
     """NVSS cutout via SkyView at 15″/px. Returns (data_mJy_per_beam, wcs)."""
     path = _cache_path('nvss', ra_deg, dec_deg, fov_arcsec)
     if not os.path.isfile(path):
-        from astroquery.skyview import SkyView
-        from astropy.coordinates import SkyCoord
-        import astropy.units as u
-        imgs = SkyView.get_images(
-            position=SkyCoord(ra=ra_deg*u.deg, dec=dec_deg*u.deg),
-            survey=['NVSS'],
-            width=fov_arcsec*u.arcsec, height=fov_arcsec*u.arcsec,
-            pixels=_skyview_pixels(fov_arcsec, NVSS_PIXSCALE))
-        imgs[0].writeto(path, overwrite=True)
+        _skyview_fits('NVSS', ra_deg, dec_deg, fov_arcsec, NVSS_PIXSCALE, path)
         print(f'  Downloaded NVSS: {os.path.basename(path)}')
     data_jyb, wcs = _read(path)
     return data_jyb * 1000.0, wcs
