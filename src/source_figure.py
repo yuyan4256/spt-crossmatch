@@ -369,8 +369,10 @@ def plot_source_by_name(name, fov=45.0, out_path=None):
     """The standard panels for ONE source of the 73, by source id.
 
     name : SPT source id, e.g. 'SPT3G_J174423.2-311650.6'
-    fov  : displayed field of view in arcsec, cropped from FITS downloaded at
-           786″ (native pixels). SPT contours only cover ~570″ (38 × 15″ cutouts).
+    fov  : displayed field of view in arcsec, any value up to 786″, cropped
+           offline from FITS cached at 786″ (native pixels; fill the cache with
+           scripts/precache_fits.py). Larger values warn and show 786″. SPT
+           contours only cover ~570″ (38 × 15″ cutouts).
     out_path : save the PNG here; None returns the figure (notebook use).
 
     Works for every source, CSC2-matched or not. Markers = SPT centroid +
@@ -379,6 +381,10 @@ def plot_source_by_name(name, fov=45.0, out_path=None):
     fell outside 3σ_pos is NOT marked. Returns (figure or out_path,
     {panel: error}), as `plot_source` does.
     """
+    if fov > DOWNLOAD_FOV_ARCSEC:
+        import warnings
+        warnings.warn(f'fov={fov}″ is larger than the cached {DOWNLOAD_FOV_ARCSEC:.0f}″ '
+                      'download; the panels show the full cached field only.')
     source = crossmatch_row(name)
     markers = spt_markers(source)
     if bool(source.get('has_csc2_match_within_3sigma', False)):
