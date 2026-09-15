@@ -83,8 +83,6 @@ references/     paper notes (README lists arXiv IDs; the PDFs are git-ignored)
 requirements.txt
 ```
 
-Slides live in Google Slides, not in this repo (`*.pptx` is git-ignored).
-
 Setup: `pip install -r requirements.txt`. `spt3g_software` is only needed by
 `scripts/gaia_official_10arcsec.py` and for writing the `.g3` mapping.
 
