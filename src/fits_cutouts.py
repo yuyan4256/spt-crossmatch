@@ -266,13 +266,13 @@ def fetch_racs_fits(ra_deg, dec_deg, fov_arcsec=DOWNLOAD_FOV_ARCSEC, username=No
                 continue
             d, _ = _read(fits_files[0])
             if np.isfinite(d).mean() < 0.2:      # blanked tile edge
-                for f in fits_files:
+                for f in files:
                     if os.path.isfile(f): os.remove(f)
                 print(f'  RACS tile {k} blank at this position, trying next')
                 continue
             os.replace(fits_files[0], path)
-            for f in fits_files[1:]:
-                if os.path.isfile(f): os.remove(f)
+            for f in files:                      # other cutouts + .checksum
+                if f != fits_files[0] and os.path.isfile(f): os.remove(f)
             got = True
             break
         if not got:
