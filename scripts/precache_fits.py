@@ -9,8 +9,12 @@ the cache. RACS-mid needs CASDA_USERNAME set (see fits_cutouts.fetch_racs_fits).
   python scripts/precache_fits.py                 # everything
   python scripts/precache_fits.py --only W1,W2    # a subset of panels
 """
-import argparse, os, sys, time, warnings
+import argparse, os, socket, sys, time, warnings
 warnings.filterwarnings('ignore')
+# No request may hang forever: a SkyView socket once sat ESTABLISHED for
+# 7 h with no data (2026-09-14). Sockets created without an explicit
+# timeout (SkyView, unwise.me) now give up after this and get retried.
+socket.setdefaulttimeout(180)
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))
 
 import pandas as pd
