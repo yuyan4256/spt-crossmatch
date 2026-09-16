@@ -19,6 +19,9 @@ from astropy.wcs import WCS
 
 from units import HIPS
 
+# Text sizes in points; same idea as source_figure.FONT.
+FONT = dict(suptitle=15, axis=12, tick=11, legend=13, scale_bar=12)
+
 WIDE_FOV_ARCSEC = 180.0
 ZOOM_FOV_ARCSEC = 30.0
 
@@ -83,7 +86,7 @@ def add_scale_bar(ax, length_arcsec=10, color='black', label='10″'):
     x_right, y_bot = w * 0.92, h * 0.08
     ax.plot([x_right - bar_px, x_right], [y_bot, y_bot], color=color, linewidth=2.5)
     ax.text(x_right - bar_px / 2, y_bot + h * 0.02, label, ha='center',
-            va='bottom', color=color, fontsize=9, fontweight='bold')
+            va='bottom', color=color, fontsize=FONT['scale_bar'], fontweight='bold')
 
 
 def add_zoom_box(ax, coord, zoom_fov_arcsec, color='gray'):
@@ -97,12 +100,12 @@ def add_zoom_box(ax, coord, zoom_fov_arcsec, color='gray'):
 
 
 def _style_axes(ax, ra_fmt, dec_fmt):
-    ax.coords['ra'].set_axislabel('R.A.', fontsize=9)
-    ax.coords['dec'].set_axislabel('Decl.', fontsize=9)
+    ax.coords['ra'].set_axislabel('R.A.', fontsize=FONT['axis'])
+    ax.coords['dec'].set_axislabel('Decl.', fontsize=FONT['axis'])
     ax.coords['ra'].set_major_formatter(ra_fmt)
     ax.coords['dec'].set_major_formatter(dec_fmt)
-    ax.tick_params(labelsize=8)
-    ax.legend(fontsize=10, loc='upper right', borderpad=0.6,
+    ax.tick_params(labelsize=FONT['tick'])
+    ax.legend(fontsize=FONT['legend'], loc='upper right', borderpad=0.6,
               facecolor='white', framealpha=0.92)
 
 
@@ -123,7 +126,7 @@ def plot_wide_zoom(source, csc2=None, out_path=None, title_prefix='', dpi=150):
 
     fig = plt.figure(figsize=(12.5, 6))
     fig.suptitle(f"{title_prefix}{sid}  (SNR={float(source['snr_max']):.1f}, "
-                 f"|b|={float(source['abs_b_deg']):.1f}°)", fontsize=11, y=0.99)
+                 f"|b|={float(source['abs_b_deg']):.1f}°)", fontsize=FONT['suptitle'], y=0.99)
     failures = {}
 
     def overlays(ax, fov_arcsec, ring_color, bar_color):

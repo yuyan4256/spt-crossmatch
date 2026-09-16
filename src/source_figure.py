@@ -88,6 +88,13 @@ PANELS = {
 DEFAULT_SMALL = ('W1', 'W2', 'W3', 'W4')
 DEFAULT_BIG = ('DECaPS-r', 'RACS-mid')
 
+# Panel text sizes, in points. One place to make every figure's labels
+# bigger or smaller; they are read at draw time, so a notebook can do
+# `source_figure.FONT['title'] = 16` before calling plot_source.
+FONT = dict(suptitle=17, title=14, axis=12, tick=11,
+            cbar_label=12, cbar_tick=11, legend=11,
+            contour=10, error=11)
+
 SPT_BANDS = (('90GHz', 'blue'), ('150GHz', 'gold'))
 STEP_SIGMA = 2.0
 MAX_LEVELS = 6
@@ -219,7 +226,7 @@ def draw_spt_contours(ax, contour_sets, tgt_wcs, tgt_shape, is_neg,
             if label:
                 ax.clabel(cs, fmt={lv: f'{abs(lv) / rms:.0f}$\\sigma$'
                                    for lv in primary},
-                          fontsize=7, inline=True)
+                          fontsize=FONT['contour'], inline=True)
             sec = np.sort(-sign * np.array([3.0, 5.0]) * rms)
             ax.contour(reproj, levels=sec, colors=s['color'],
                        linewidths=0.8, linestyles='dashed')
@@ -276,26 +283,26 @@ def _draw_panel(fig, gridspec_cell, spec, source, coord, contour_sets,
         ax = fig.add_subplot(gridspec_cell, projection=wcs)
         im = ax.imshow(data, origin='lower', cmap='gray_r',
                        vmin=vmin, vmax=vmax)
-        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.08)
-        cbar.set_label(spec['cbar'], fontsize=8)
-        cbar.ax.tick_params(labelsize=7)
+        cbar = fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label(spec['cbar'], fontsize=FONT['cbar_label'])
+        cbar.ax.tick_params(labelsize=FONT['cbar_tick'])
 
         draw_spt_contours(ax, contour_sets, wcs, data.shape, is_neg, sid)
         _draw_markers(ax, coord, markers)
         _crop(ax, wcs, coord, fov_arcsec)
 
-        ax.coords[0].set_axislabel('R.A.', fontsize=8)
-        ax.coords[1].set_axislabel('Decl.', fontsize=8)
+        ax.coords[0].set_axislabel('R.A.', fontsize=FONT['axis'])
+        ax.coords[1].set_axislabel('Decl.', fontsize=FONT['axis'])
         ax.coords[0].set_major_formatter('d.ddd')
         ax.coords[1].set_major_formatter('d.ddd')
-        ax.tick_params(labelsize=7)
-        ax.set_title(spec['title'], fontsize=10)
+        ax.tick_params(labelsize=FONT['tick'])
+        ax.set_title(spec['title'], fontsize=FONT['title'])
         if with_legend:
             for band, color in SPT_BANDS:
                 if band in contour_sets:
                     ax.plot([], [], color=color, lw=1.2,
                             label=f'SPT {band.replace("GHz", " GHz")}')
-            ax.legend(fontsize=7, loc='upper right', facecolor='white',
+            ax.legend(fontsize=FONT['legend'], loc='upper right', facecolor='white',
                       framealpha=0.85)
         return None
     except Exception as e:
@@ -303,7 +310,7 @@ def _draw_panel(fig, gridspec_cell, spec, source, coord, contour_sets,
         ax = fig.add_subplot(gridspec_cell)
         ax.set_facecolor('#dde')
         ax.text(0.5, 0.5, f"{spec['title']}\n⚠ {msg[:70]}", ha='center',
-                va='center', transform=ax.transAxes, fontsize=8,
+                va='center', transform=ax.transAxes, fontsize=FONT['error'],
                 fontweight='bold')
         ax.axis('off')
         return msg
@@ -441,10 +448,10 @@ def plot_source(source, out_path=None, small=DEFAULT_SMALL, big=DEFAULT_BIG,
     fig.suptitle(
         f'{sid}   SNR={snr:.1f},  l={gal.l.deg:.2f}°, b={gal.b.deg:+.2f}°'
         + (f'   [{cutout_note}]' if cutout_note else ''),
-        fontsize=12, y=0.99)
+        fontsize=FONT['suptitle'], y=0.99)
     gs = gridspec.GridSpec(max(n_small_rows, len(big)), 3, figure=fig,
                            left=0.05, right=0.97, top=0.93, bottom=0.07,
-                           wspace=0.30, hspace=0.30)
+                           wspace=0.55, hspace=0.30)
 
     failures = {}
     for i, key in enumerate(small):
