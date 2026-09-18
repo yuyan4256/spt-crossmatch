@@ -106,6 +106,12 @@ Setup: `pip install -r requirements.txt`. `spt3g_software` is only needed by
 
 ### `scripts/`
 
+`spt.py` is the terminal entry point — alias it once
+(`alias spt="$HOME/anaconda3/bin/python <repo>/scripts/spt.py"`) and then
+`spt plot <id> --fov 90`, `spt precache`, `spt build-table`, or
+`spt run <path>` for anything else, from any directory. `spt list` shows the
+commands. Table-rewriting scripts are only reachable through `spt run`.
+
 - **master table** — `build_v4_crossmatch_table.py` builds
   `outputs/v4_crossmatch_table.csv` from `data/centroids 4_yr.cat`; then
   `add_milliquas.py`, `add_decaps.py`, `update_sigma_wan2025.py` add / update
