@@ -1,5 +1,6 @@
 """Project-relative paths so scripts/notebooks work from any CWD."""
 import os
+import re
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 
@@ -12,3 +13,22 @@ COADD_DIR = os.path.join(DATA, 'coadd')          # big galaxy_3yr_pc_gc_v2_{90,1
 UNWISE_DIR = os.path.join(DATA, 'unwise')        # unWISE cache
 IMAGES_DIR = os.path.join(OUT, 'images')
 LEGACY_DIR = os.path.join(OUT, 'legacy')
+
+
+def fov_dir(base, fov_arcsec):
+    """outputs/images/<base>_fov<NN> — a batch of figures names its fov.
+
+    Every batch goes in its own folder, so a rerun can only overwrite figures
+    drawn at the same fov; a different fov lands next to them, not on top.
+    """
+    return os.path.join(IMAGES_DIR, f'{base}_fov{fov_arcsec:g}')
+
+
+def check_fov_dir(out_dir, fov_arcsec):
+    """Refuse an --out-dir whose name says a different fov than the one asked."""
+    m = re.search(r'_fov(\d+(?:\.\d+)?)$', os.path.basename(os.path.normpath(out_dir)))
+    if m and float(m.group(1)) != float(fov_arcsec):
+        raise SystemExit(f'--out-dir {out_dir!r} is a fov {m.group(1)}" folder but '
+                         f'--fov is {fov_arcsec:g}"; pick one (figures at different '
+                         f'fov must not share a folder)')
+    return out_dir

@@ -60,7 +60,8 @@ outputs/
   3yr_classify.csv, crossmatch_results_v3.csv, present_table.csv   3-yr / v3 era tables
   v4_*_summary.csv, spectral_index.csv, roma_bzcat_footprint.csv
 
-  images/                            every figure (subfolders per figure family)
+  images/                            every figure (subfolders per figure family;
+                                     batch folders carry the fov: *_fov60)
   mappings/                          published two-column association_TS -> p tables
   logs/                              stdout of the long null / scoring runs
   archive/                           superseded one-off products, kept for provenance
@@ -196,6 +197,12 @@ python scripts/plot_source_panels.py SPT3G_J173508.4-293000.8   # one source
 python scripts/plot_source_panels.py --all                      # all 73
 python scripts/plot_source_panels.py --all --big DECaPS-r,NVSS  # swap a panel
 ```
+
+A batch lands in `outputs/images/source_panels_fov<FOV>/` — the folder always
+names the field of view, so a rerun overwrites only figures drawn at the same
+fov and a new fov lands beside them instead of on top. `plot_csc2_cutout_unwise.py`
+follows the same rule (`v4_csc2_candidates_fov<FOV>/`). `--out-dir` may point
+anywhere, but not at a `_fov<N>` folder whose N disagrees with `--fov`.
 
 Panels are read from `data/fits_cache/` (run `precache_fits.py` first), so a
 full run is offline and takes ~6 s per source. Failures never abort the run:

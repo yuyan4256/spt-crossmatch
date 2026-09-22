@@ -30,10 +30,11 @@ import pandas as pd
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, 'src'))
 
+from paths import check_fov_dir, fov_dir
 from source_figure import DEFAULT_BIG, DEFAULT_SMALL, PANELS, plot_source
 
 TABLE = os.path.join(REPO, 'outputs', 'v4_crossmatch_table.csv')
-OUT_DIR = os.path.join(REPO, 'outputs', 'images', 'source_panels')
+OUT_BASE = 'source_panels'   # the run's fov is appended: source_panels_fov60
 ERR_LOG = os.path.join(REPO, 'outputs', 'logs', 'plot_source_panels_errors.csv')
 
 
@@ -54,7 +55,8 @@ def main():
     ap.add_argument('ids', nargs='*', help='SPT ids; omit with --all')
     ap.add_argument('--all', action='store_true', help='every source in the table')
     ap.add_argument('--table', default=TABLE)
-    ap.add_argument('--out-dir', default=OUT_DIR)
+    ap.add_argument('--out-dir', help='default outputs/images/'
+                                     f'{OUT_BASE}_fov<FOV>')
     ap.add_argument('--panels', help=f'small 2x2 block, comma-separated '
                                      f'(default {",".join(DEFAULT_SMALL)})')
     ap.add_argument('--big', help=f'full-height right column '
@@ -68,6 +70,8 @@ def main():
                     help='mute astropy WCS/FITS warnings (they are diagnostic '
                          '— only use this once a run is known clean)')
     args = ap.parse_args()
+    args.out_dir = (check_fov_dir(args.out_dir, args.fov) if args.out_dir
+                    else fov_dir(OUT_BASE, args.fov))
 
     if args.quiet_warnings:
         warnings.filterwarnings('ignore')

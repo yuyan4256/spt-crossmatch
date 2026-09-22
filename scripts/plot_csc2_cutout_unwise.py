@@ -31,19 +31,23 @@ import pandas as pd
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, 'src'))
 
+from paths import check_fov_dir, fov_dir
 from source_figure import csc2_marker, plot_source_by_name
 
 TABLE = os.path.join(REPO, 'outputs', 'v4_crossmatch_table.csv')
-OUT_DIR = os.path.join(REPO, 'outputs', 'images', 'v4_csc2_candidates')
+OUT_BASE = 'v4_csc2_candidates'   # the run's fov is appended: ..._fov60
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('ids', nargs='*', help='SPT ids; default = every CSC2 match')
-    ap.add_argument('--out-dir', default=OUT_DIR)
+    ap.add_argument('--out-dir', help='default outputs/images/'
+                                     f'{OUT_BASE}_fov<FOV>')
     ap.add_argument('--fov', type=float, default=45.0)
     args = ap.parse_args()
+    args.out_dir = (check_fov_dir(args.out_dir, args.fov) if args.out_dir
+                    else fov_dir(OUT_BASE, args.fov))
 
     df = pd.read_csv(TABLE)
     if args.ids:
