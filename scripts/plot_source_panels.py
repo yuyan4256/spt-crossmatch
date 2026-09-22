@@ -35,6 +35,12 @@ from source_figure import DEFAULT_BIG, DEFAULT_SMALL, PANELS, plot_source
 
 TABLE = os.path.join(REPO, 'outputs', 'v4_crossmatch_table.csv')
 OUT_BASE = 'source_panels'   # the run's fov is appended: source_panels_fov60
+# --subset <name>: which sources, and the folder they get. Each subset is a
+# (filter, out-dir base) pair, so a subset's figures never mix with --all's.
+SUBSETS = {
+    'no-csc2': (lambda df: df[~df['has_csc2_match_within_3sigma'].astype(bool)],
+                'v4_no_csc2_candidates'),
+}
 ERR_LOG = os.path.join(REPO, 'outputs', 'logs', 'plot_source_panels_errors.csv')
 
 
@@ -54,6 +60,10 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('ids', nargs='*', help='SPT ids; omit with --all')
     ap.add_argument('--all', action='store_true', help='every source in the table')
+    ap.add_argument('--subset', choices=sorted(SUBSETS),
+                    help="a named subset instead of --all; 'no-csc2' = the "
+                         'sources with no CSC2 match within 3 sigma, strongest '
+                         '|SNR| first, into v4_no_csc2_candidates_fov<FOV>/')
     ap.add_argument('--table', default=TABLE)
     ap.add_argument('--out-dir', help='default outputs/images/'
                                      f'{OUT_BASE}_fov<FOV>')
@@ -70,8 +80,9 @@ def main():
                     help='mute astropy WCS/FITS warnings (they are diagnostic '
                          '— only use this once a run is known clean)')
     args = ap.parse_args()
+    select, out_base = SUBSETS.get(args.subset, (None, OUT_BASE))
     args.out_dir = (check_fov_dir(args.out_dir, args.fov) if args.out_dir
-                    else fov_dir(OUT_BASE, args.fov))
+                    else fov_dir(out_base, args.fov))
 
     if args.quiet_warnings:
         warnings.filterwarnings('ignore')
@@ -79,7 +90,9 @@ def main():
     big = _panel_list(args.big, DEFAULT_BIG)
 
     df = pd.read_csv(args.table)
-    if args.all:
+    if select is not None:
+        rows = select(df).sort_values('snr_max', key=abs, ascending=False)
+    elif args.all:
         rows = df
     elif args.ids:
         rows = df[df['id'].isin(args.ids)]
@@ -89,7 +102,7 @@ def main():
         if rows.empty:
             raise SystemExit('nothing to plot')
     else:
-        raise SystemExit('give source ids or --all (see --help)')
+        raise SystemExit('give source ids, --all or --subset (see --help)')
     if args.limit:
         rows = rows.head(args.limit)
 

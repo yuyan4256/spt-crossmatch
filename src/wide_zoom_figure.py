@@ -20,7 +20,7 @@ from astropy.wcs import WCS
 from units import HIPS
 
 # Text sizes in points; same idea as source_figure.FONT.
-FONT = dict(suptitle=15, axis=12, tick=11, legend=13, scale_bar=12)
+FONT = dict(suptitle=19, axis=16, tick=14, legend=16, scale_bar=15)
 
 WIDE_FOV_ARCSEC = 180.0
 ZOOM_FOV_ARCSEC = 30.0

@@ -35,6 +35,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 PER_SOURCE = [
     ('source panels (all 73)', 'plot_source_panels.py', ['--all', '--quiet-warnings']),
     ('CSC2 candidates',        'plot_csc2_cutout_unwise.py', []),
+    ('no-CSC2 subset',         'plot_source_panels.py',
+     ['--subset', 'no-csc2', '--quiet-warnings']),
 ]
 FIELD = [
     ('Gaia p_chance histogram', 'plot_gaia_pchance_hist.py', []),

@@ -91,9 +91,9 @@ DEFAULT_BIG = ('DECaPS-r', 'RACS-mid')
 # Panel text sizes, in points. One place to make every figure's labels
 # bigger or smaller; they are read at draw time, so a notebook can do
 # `source_figure.FONT['title'] = 16` before calling plot_source.
-FONT = dict(suptitle=17, title=14, axis=12, tick=11,
-            cbar_label=12, cbar_tick=11, legend=11,
-            contour=10, error=11)
+FONT = dict(suptitle=22, title=19, axis=16, tick=14,
+            cbar_label=16, cbar_tick=14, legend=14,
+            contour=13, error=15)
 
 SPT_BANDS = (('90GHz', 'blue'), ('150GHz', 'gold'))
 STEP_SIGMA = 2.0
@@ -295,6 +295,10 @@ def _draw_panel(fig, gridspec_cell, spec, source, coord, contour_sets,
         ax.coords[1].set_axislabel('Decl.', fontsize=FONT['axis'])
         ax.coords[0].set_major_formatter('d.ddd')
         ax.coords[1].set_major_formatter('d.ddd')
+        # Two R.A. ticks per panel: three 'd.ddd' labels at FONT['tick'] run
+        # into each other on a panel this size.
+        ax.coords[0].set_ticks(number=2)
+        ax.coords[1].set_ticks(number=3)
         ax.tick_params(labelsize=FONT['tick'])
         ax.set_title(spec['title'], fontsize=FONT['title'])
         if with_legend:
@@ -451,7 +455,7 @@ def plot_source(source, out_path=None, small=DEFAULT_SMALL, big=DEFAULT_BIG,
         fontsize=FONT['suptitle'], y=0.99)
     gs = gridspec.GridSpec(max(n_small_rows, len(big)), 3, figure=fig,
                            left=0.05, right=0.97, top=0.93, bottom=0.07,
-                           wspace=0.55, hspace=0.30)
+                           wspace=0.62, hspace=0.34)
 
     failures = {}
     for i, key in enumerate(small):

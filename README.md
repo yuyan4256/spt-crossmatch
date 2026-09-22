@@ -199,6 +199,10 @@ python scripts/plot_source_panels.py --all                      # all 73
 python scripts/plot_source_panels.py --all --big DECaPS-r,NVSS  # swap a panel
 ```
 
+`--subset no-csc2` draws the sources with no CSC2 match within 3σ, strongest
+|SNR| first, into `v4_no_csc2_candidates_fov<FOV>/` — the subset the
+`analyze_v4_no_csc2_candidates.ipynb` notebook used to render by hand.
+
 `spt figures <FOV>` (`plot_all_figures.py`) runs the whole set in one go: the
 per-source batches at that fov, then the field figures — the p_chance
 histograms, the separation diagnostics, the sky overlays — which have no fov
