@@ -2,6 +2,7 @@
 """spt — one terminal entry point for this repo's scripts.
 
 Usage:
+  spt figures 60              every figure, per-source panels at fov 60"
   spt <command> [args...]     run a command; args go to the script unchanged
   spt <command> --help        that command's own help
   spt list                    every command with a one-line description
@@ -24,6 +25,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 COMMANDS = {
+    'figures':     'plot_all_figures.py',
     'plot':        'plot_source_panels.py',
     'plot-csc2':   'plot_csc2_cutout_unwise.py',
     'precache':    'precache_fits.py',

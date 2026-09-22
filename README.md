@@ -109,9 +109,10 @@ Setup: `pip install -r requirements.txt`. `spt3g_software` is only needed by
 
 `spt.py` is the terminal entry point — alias it once
 (`alias spt="$HOME/anaconda3/bin/python <repo>/scripts/spt.py"`) and then
-`spt plot <id> --fov 90`, `spt precache`, `spt build-table`, or
-`spt run <path>` for anything else, from any directory. `spt list` shows the
-commands. Table-rewriting scripts are only reachable through `spt run`.
+`spt figures 60` (every figure at once), `spt plot <id> --fov 90`,
+`spt precache`, `spt build-table`, or `spt run <path>` for anything else, from
+any directory. `spt list` shows the commands. Table-rewriting scripts are only
+reachable through `spt run`.
 
 - **master table** — `build_v4_crossmatch_table.py` builds
   `outputs/v4_crossmatch_table.csv` from `data/centroids 4_yr.cat`; then
@@ -197,6 +198,12 @@ python scripts/plot_source_panels.py SPT3G_J173508.4-293000.8   # one source
 python scripts/plot_source_panels.py --all                      # all 73
 python scripts/plot_source_panels.py --all --big DECaPS-r,NVSS  # swap a panel
 ```
+
+`spt figures <FOV>` (`plot_all_figures.py`) runs the whole set in one go: the
+per-source batches at that fov, then the field figures — the p_chance
+histograms, the separation diagnostics, the sky overlays — which have no fov
+and are redrawn in place (`--panels-only` skips them). A step that fails is
+reported at the end instead of stopping the run.
 
 A batch lands in `outputs/images/source_panels_fov<FOV>/` — the folder always
 names the field of view, so a rerun overwrites only figures drawn at the same
